@@ -1,0 +1,207 @@
+<head>
+  <meta charset="utf-8" />
+  <title></title>
+  <script data-require="jquery" data-semver="3.0.0" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.js"></script>
+  <script data-require="moment.js@2.7.0" data-semver="2.7.0" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.7.0/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+</head>
+
+<body>
+  <canvas id="mychart" width="300" height="100"></canvas>
+
+  
+<script>
+let eventSource;
+
+function start() { // when "Start" button pressed
+  if (!window.EventSource) {
+    // IE or an old browser
+    alert("The browser doesn't support EventSource.");
+    return;
+  }
+
+  eventSource = new EventSource('handshake');
+
+  eventSource.onopen = function(e) {
+    log("Event: open");
+  };
+
+  eventSource.onerror = function(e) {
+    log("Event: error");
+    if (this.readyState == EventSource.CONNECTING) {
+      log(`Reconnecting (readyState=${this.readyState})...`);
+    } else {
+      log("Error has occured.");
+    }
+  };
+  console.log("hi")
+
+//   eventSource.addEventListener('message', function(e) {
+  
+//     log("Event: bye, data: " + e.data);
+//   });
+  sample = 80
+  eventSource.onmessage = function(e) {
+   var dashboard = JSON.parse(e.data);
+    AvgCpuChartData.datasets[0].data.shift();
+    dashboard.MemoryStatus.Usedpercent = dashboard.MemoryStatus.Usedpercent;
+    sample = dashboard.MemoryStatus.Usedpercent
+    AvgCpuChartData.datasets[0].data.push(dashboard.MemoryStatus.Usedpercent);
+    AvgCpuChart.update();
+
+
+ 
+  
+ 
+    // log("Total: " + dashboard.MemoryStatus.Total/(1024*1024*1024) + "mb" + "  Free: " + dashboard.MemoryStatus.Free/(1024*1024*1024) + "mb" + "  Usedpercent: " + dashboard.MemoryStatus.Usedpercent);
+
+  };
+}
+
+function stop() { // when "Stop" button pressed
+  eventSource.close();
+  log("eventSource.close()");
+}
+
+function log(msg) {
+  logElem.innerHTML += msg + "<br>";
+  document.documentElement.scrollTop = 99999999;
+}
+
+numsamples = 60;
+AvgCpuChartOptions = {
+  options: {
+      tooltips: {
+         mode: 'index',
+         intersect: true
+      },
+      hover: {
+         mode: 'index',
+         intersect: true
+      }
+   },
+
+  showLines: true,
+  animation: {
+    duration: 300,
+    easing: 'linear'
+  },
+  responsive: true,
+  title: {
+    display: true,
+    text: 'Average memory Usage (%)',
+    padding: 5
+  },
+  legend: {
+    display: false,
+    position: 'top',
+    labels: {
+      boxWidth: 10,
+      padding: 2
+    }
+  },
+  tooltips: {
+    enabled: false
+  },
+  scales: {
+    yAxes: [{
+      id: 'memory',
+      position: 'left',
+      gridLines: {
+        drawTicks: false
+      },
+      ticks: {
+        fontSize: 10,
+        max: 100,
+        min: 0,
+        stepSize: 25,
+        callback: function(value) {
+          return value + '%';
+        }
+      }
+    }],
+    xAxes: [{
+      label: 'Apples Sold',
+
+      scaleLabel: {
+        display: true,
+        fontSize: 11,
+        labelString: 'Time sec'
+      },
+      gridLines: {
+        display: true,
+        drawTicks: false
+      },
+      ticks: {
+        fontSize: 10,
+        maxRotation: 0,
+        autoSkip: false,
+        callback: function(value) {
+          return value.toString().length > 0 ? value : null;
+        },
+      }
+    }]
+  }
+};
+var AvgCpuChartData = {
+  labels: [],
+  datasets: [{
+    label: '',
+    yAxisID: 'memory',
+    fill: true,
+    lineTension: 0.2,
+    backgroundColor: 'rgba(75,192,192,0.4)',
+    borderColor: 'rgba(75,192,192,1)',
+    borderCapStyle: 'butt',
+    borderDash: [],
+    borderDashOffset: 0.0,
+    borderWidth: 1,
+    borderJoinStyle: 'miter',
+    pointBorderColor: 'rgba(75,192,192,1)',
+    pointBackgroundColor: '#fff',
+    pointBorderWidth: 1,
+    pointHoverRadius: 0,
+    pointHoverBackgroundColor: 'rgba(75,192,192,1)',
+    pointHoverBorderColor: 'rgba(220,220,220,1)',
+    pointHoverBorderWidth: 0,
+    pointRadius: 0,
+    pointHitRadius: 10,
+    data: [],
+  }]
+};
+for (var i = 10; i >=0; i--) {
+    AvgCpuChartData.labels.push(i*6);
+
+  AvgCpuChartData.datasets[0].data.push(null);
+}
+var AvgCpuChart = new Chart($('#mychart'), {
+  type: 'line',
+  data: AvgCpuChartData,
+  options: AvgCpuChartOptions,
+  scaleOverride : true,
+        scaleSteps : 60,
+        scaleStepWidth : 60,
+        scaleStartValue : 0 
+});
+
+// setInterval(function randomdata() {
+//       AvgCpuChartData.datasets[0].data.shift();
+//       AvgCpuChartData.labels.shift();
+//       var ts = new Date().getTime();
+//       var csecs = moment(ts).format('s');
+//       var label = '';
+//       if (csecs % 15 === 0) {
+//         label = csecs == '0' ? moment(ts).format('HH:mm') : moment(ts).format(':ss');
+//        }
+//         AvgCpuChartData.datasets[0].data.push(Math.floor((Math.random() * 100) + 1));
+//         console.log(Math.floor((Math.random() * 100) + 1))
+//         AvgCpuChartData.labels.push(label);
+//         AvgCpuChart.update();
+//       }, 1000);
+
+</script>
+
+<button onclick="start()">Start</button> Press the "Start" to begin.
+<div id="logElem" style="margin: 6px 0"></div>
+
+<button onclick="stop()">Stop</button> "Stop" to finish.
